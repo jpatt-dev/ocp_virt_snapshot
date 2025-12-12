@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  author: Your Name
+  description: Ansible role for creating snapshots of KubeVirt virtual machines in OpenShift Container Platform
+  company: Your Company
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Kubernetes
+      versions:
+        - all
+  galaxy_tags:
+    - kubernetes
+    - kubevirt
+    - openshift
+    - virtualization
+    - vm
+    - snapshot
+    - aap
+
+dependencies:
+  - name: kubernetes.core
+    version: ">=2.0.0"
+
+collections:
+  - name: kubernetes.core
+    version: ">=2.0.0"
+  - name: ansible.builtin
+    version: ">=2.9.0"

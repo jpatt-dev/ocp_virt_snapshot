@@ -1,0 +1,52 @@
+---
+# AAP Job Template Playbook: Create VM Snapshot
+# This playbook is for use in an Ansible Automation Platform Job Template
+# It handles VMs with single or multiple volumes/disks automatically
+
+- name: Create KubeVirt Snapshot via AAP
+  hosts: localhost
+  gather_facts: yes
+  
+  # Variables should be provided via AAP Job Template Extra Variables or Survey
+  # Required variables:
+  #   vm_name: my-vm-name
+  #   vm_namespace: my-namespace
+  #   kubeconfig: ~/.kube/config (or use context/host+credentials)
+  #   snapshot_name: backup-20240115 (optional, auto-generated if not provided)
+
+  tasks:
+    - name: Display job information
+      ansible.builtin.debug:
+        msg:
+          - "Creating snapshot for VM: {{ vm_name }}"
+          - "Namespace: {{ vm_namespace }}"
+          - "Snapshot will include ALL disks/volumes attached to the VM"
+          - "This is automatic - no additional configuration needed for multi-volume VMs"
+
+    - name: Create KubeVirt snapshot
+      ansible.builtin.include_role:
+        name: ocp_virt_snapshot
+      vars:
+        snapshot_name: "{{ snapshot_name | default('aap-snapshot-' + ansible_date_time.epoch) }}"
+
+    - name: Display snapshot creation summary
+      ansible.builtin.debug:
+        msg:
+          - "=== Snapshot Creation Summary ==="
+          - "VM Name: {{ snapshot_info.vm_name }}"
+          - "Namespace: {{ snapshot_info.vm_namespace }}"
+          - "Snapshot Name: {{ snapshot_info.snapshot_name }}"
+          - "Snapshot UID: {{ snapshot_info.snapshot_uid }}"
+          - "Status: {{ snapshot_info.snapshot_phase }}"
+          - "Disks Included: {{ snapshot_info.vm_disks_count | default('N/A') }}"
+          - "Note: {{ snapshot_info.note }}"
+      when: snapshot_info is defined
+
+    - name: Verify snapshot was created
+      ansible.builtin.assert:
+        that:
+          - snapshot_created | default(false) | bool
+          - snapshot_info.status == "success"
+        fail_msg: "Snapshot creation failed or verification unsuccessful"
+        success_msg: "Snapshot created and verified successfully"
+      when: snapshot_info is defined

@@ -1,0 +1,20 @@
+---
+# Default variables for OpenShift Virtualization Snapshot Creation Role
+
+# Required variables (must be set by user):
+# vm_name: my-vm-name
+# vm_namespace: my-namespace
+
+# Optional Kubernetes connection variables
+# Use one of: kubeconfig, context, or host+api_key/username+password
+kubeconfig: null  # Path to kubeconfig file
+context: null  # Kubernetes context to use
+host: null  # Kubernetes API server URL
+api_key: null  # API key for authentication
+username: null  # Username for authentication
+password: null  # Password for authentication
+validate_certs: true  # Validate SSL certificates
+
+# Snapshot creation defaults
+snapshot_name: null
+snapshot_force: false

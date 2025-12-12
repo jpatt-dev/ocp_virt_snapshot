@@ -1,0 +1,22 @@
+---
+# OpenShift Virtualization Snapshot Creation Role - Main Tasks
+# This role creates snapshots for KubeVirt virtual machines
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - vm_name is defined
+      - vm_namespace is defined
+    fail_msg: "Required variables (vm_name, vm_namespace) must be defined"
+    success_msg: "All required variables are defined"
+  tags:
+    - always
+    - validation
+    - ocp_virt_snapshot
+
+- name: Include create snapshot tasks
+  ansible.builtin.include_tasks: create.yml
+  tags:
+    - create
+    - snapshot
+    - ocp_virt_snapshot
