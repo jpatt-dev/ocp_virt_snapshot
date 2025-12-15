@@ -180,7 +180,8 @@
         namespace: "{{ vm_namespace }}"
         labels:
           created-by: ansible
-          created-at: "{{ ansible_date_time.iso8601 }}"
+          created-date: "{{ ansible_date_time.date | replace('-', '') }}"
+          created-time: "{{ ansible_date_time.epoch }}"
       spec:
         source:
           apiGroup: kubevirt.io

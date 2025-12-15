@@ -23,11 +23,14 @@
           - "Snapshot will include ALL disks/volumes attached to the VM"
           - "This is automatic - no additional configuration needed for multi-volume VMs"
 
+    - name: Set snapshot name if not provided
+      ansible.builtin.set_fact:
+        snapshot_name: "{{ snapshot_name | default('aap-snapshot-' + ansible_date_time.epoch) }}"
+      when: snapshot_name is not defined or snapshot_name == ''
+
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
         name: ../roles/ocp_virt_snapshot
-      vars:
-        snapshot_name: "{{ snapshot_name | default('aap-snapshot-' + ansible_date_time.epoch) }}"
       # Using relative path to ensure local role is used
 
     - name: Display snapshot creation summary
