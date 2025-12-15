@@ -1,9 +1,9 @@
 ---
-# Default variables for OpenShift Virtualization Snapshot Creation Role
-
-# Required variables (must be set by user):
-# vm_name: my-vm-name
-# vm_namespace: my-namespace
+# OCP Virtualization Snapshot Role - Default Variables
+# Updated: December 15, 2025 - Clean version for AAP
+# Required variables (must be set by user or survey):
+#   vm_name: name-of-vm
+#   vm_namespace: namespace-name
 
 # Optional Kubernetes connection variables
 # Use one of: kubeconfig, context, or host+api_key/username+password

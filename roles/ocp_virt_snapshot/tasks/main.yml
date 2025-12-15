@@ -1,6 +1,7 @@
 ---
-# OpenShift Virtualization Snapshot Creation Role - Main Tasks
-# This role creates snapshots for KubeVirt virtual machines
+# OCP Virtualization Snapshot Role - Main Entry Point
+# Updated: December 15, 2025 - AAP Compatible
+# This role creates snapshots for KubeVirt virtual machines in OpenShift
 
 - name: Validate required variables
   ansible.builtin.assert:

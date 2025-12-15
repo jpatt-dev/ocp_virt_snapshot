@@ -1,22 +1,26 @@
 ---
+# OCP Virtualization Snapshot Role - Metadata
+# Version: 2.0 - Cleaned for AAP (December 15, 2025)
+# This role creates KubeVirt VM snapshots - no external dependencies required
+
 galaxy_info:
-  author: Your Name
-  description: Ansible role for creating snapshots of KubeVirt virtual machines in OpenShift Container Platform
-  company: Your Company
+  role_name: ocp_virt_snapshot
+  author: Jon Patterson
+  description: Create KubeVirt VM snapshots in OpenShift Virtualization
+  company: Internal
   license: MIT
   min_ansible_version: "2.9"
+  
   platforms:
-    - name: Kubernetes
+    - name: GenericLinux
       versions:
-        - all
+        - any
+  
   galaxy_tags:
-    - kubernetes
-    - kubevirt
     - openshift
+    - kubevirt
     - virtualization
-    - vm
     - snapshot
-    - aap
 
-# Collections are managed via requirements.yml at the project level
-# Dependencies should not be specified here for AAP usage
+# NO dependencies - collections managed via requirements.yml
+# This file intentionally kept minimal for AAP compatibility
