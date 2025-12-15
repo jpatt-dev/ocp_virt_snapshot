@@ -215,7 +215,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: snapshot_status
-  no_log: "{{ password is defined or api_key is defined }}"
+  # no_log temporarily removed to debug authentication issues
   changed_when: false
   until: >
     snapshot_status.resources[0].status is defined and
