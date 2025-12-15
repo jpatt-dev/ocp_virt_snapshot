@@ -205,7 +205,7 @@
   kubernetes.core.k8s_info:
     api_version: snapshot.kubevirt.io/v1alpha1
     kind: VirtualMachineSnapshot
-    name: "{{ snapshot_result.k8s_obj.metadata.name }}"
+    name: "{{ snapshot_name }}"
     namespace: "{{ vm_namespace }}"
     kubeconfig: "{{ kubeconfig | default(omit) }}"
     context: "{{ context | default(omit) }}"
