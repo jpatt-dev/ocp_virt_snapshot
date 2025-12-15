@@ -27,63 +27,17 @@
       ansible.builtin.set_fact:
         snapshot_timestamp: "{{ ansible_date_time.epoch }}"
     
-    - name: Debug current snapshot_name value
-      ansible.builtin.debug:
-        msg:
-          - "BEFORE: snapshot_name value: '{{ snapshot_name | default('UNDEFINED') }}'"
-          - "BEFORE: snapshot_timestamp: {{ snapshot_timestamp }}"
-    
-    - name: Convert snapshot_name to string for validation
-      ansible.builtin.set_fact:
-        _snapshot_name_str: "{{ snapshot_name | default('') | string }}"
-    
-    - name: Check if snapshot name is valid (starts with aap-snapshot- followed by digits)
-      ansible.builtin.set_fact:
-        _snapshot_name_valid: "{{ _snapshot_name_str is regex('^aap-snapshot-\\d+$') }}"
-        _has_template_pattern: "{{ 'ansible_date_time.epoch' in _snapshot_name_str }}"
-    
-    - name: Determine if snapshot name needs regeneration
-      ansible.builtin.set_fact:
-        _should_regenerate: >-
-          {{
-            snapshot_name is not defined or
-            _snapshot_name_str | length == 0 or
-            not (_snapshot_name_valid | bool) or
-            (_has_template_pattern | bool)
-          }}
-    
-    - name: Debug validation results
-      ansible.builtin.debug:
-        msg:
-          - "snapshot_name string: '{{ _snapshot_name_str }}'"
-          - "Is valid format: {{ _snapshot_name_valid }}"
-          - "Has template pattern: {{ _has_template_pattern }}"
-          - "Should regenerate: {{ _should_regenerate }}"
-    
-    - name: Always regenerate snapshot name using timestamp fact
+    - name: Generate snapshot name if not provided or invalid
       ansible.builtin.set_fact:
         snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-      when: _should_regenerate | bool
+      when: >
+        (snapshot_name is not defined) or
+        (snapshot_name | default('') | length == 0) or
+        ('{{' in (snapshot_name | default('') | string))
     
-    - name: Debug final snapshot_name value
-      ansible.builtin.debug:
-        msg:
-          - "AFTER: snapshot_name value: '{{ snapshot_name }}'"
-          - "AFTER: snapshot_name length: {{ snapshot_name | length }}"
-
     - name: Display snapshot name
       ansible.builtin.debug:
         msg: "Snapshot will be named: {{ snapshot_name }}"
-    
-    - name: Validate snapshot name is correct before calling role
-      ansible.builtin.assert:
-        that:
-          - snapshot_name is defined
-          - snapshot_name | length > 0
-          - "'ansible_date_time.epoch' not in (snapshot_name | string)"
-          - "(snapshot_name | string) is regex('^aap-snapshot-\\d+$')"
-        fail_msg: "Snapshot name is invalid: '{{ snapshot_name }}'. It should be in format 'aap-snapshot-<timestamp>'"
-        success_msg: "Snapshot name is valid: {{ snapshot_name }}"
     
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
