@@ -23,13 +23,19 @@
           - "Snapshot will include ALL disks/volumes attached to the VM"
           - "This is automatic - no additional configuration needed for multi-volume VMs"
 
+    - name: Check if snapshot name needs to be generated
+      ansible.builtin.set_fact:
+        _needs_snapshot_name: "{{ snapshot_name is not defined or snapshot_name | default('') | length == 0 }}"
+    
+    - name: Check if snapshot name contains unprocessed template syntax
+      ansible.builtin.set_fact:
+        _has_template_syntax: "{{ snapshot_name | default('') | regex_search('\\{\\{') is not none }}"
+      when: snapshot_name is defined and snapshot_name | default('') | length > 0
+    
     - name: Set snapshot name if not provided or contains unprocessed template syntax
       ansible.builtin.set_fact:
         snapshot_name: "aap-snapshot-{{ ansible_date_time.epoch }}"
-      when: >
-        snapshot_name is not defined or
-        snapshot_name | default('') | length == 0 or
-        ('{{' in (snapshot_name | default('') | string))
+      when: _needs_snapshot_name | bool or (_has_template_syntax | default(false) | bool)
 
     - name: Display snapshot name
       ansible.builtin.debug:
