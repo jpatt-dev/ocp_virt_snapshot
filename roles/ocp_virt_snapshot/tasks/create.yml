@@ -237,11 +237,11 @@
   no_log: true
   changed_when: false
   until: >
-    snapshot_status.resources is defined and
-    snapshot_status.resources | length > 0 and
-    snapshot_status.resources[0].status is defined and
-    (snapshot_status.resources[0].status.ready | default(false) | bool or
-     snapshot_status.resources[0].status.error is defined)
+    snapshot_status.resources | default([]) | length > 0 and
+    (
+      (snapshot_status.resources[0].status.ready | default(false) | bool) or
+      (snapshot_status.resources[0].status.error is defined)
+    )
   retries: 30
   delay: 5
   tags:
@@ -249,23 +249,11 @@
     - snapshot
     - ocp_virt_snapshot
 
-- name: Fail if snapshot not found after creation
-  ansible.builtin.fail:
-    msg: "Snapshot '{{ snapshot_name }}' was not found in namespace '{{ vm_namespace }}' after creation. It may have been deleted or there may be a permissions issue."
-  when: >
-    snapshot_status.resources is not defined or
-    snapshot_status.resources | length == 0
-  tags:
-    - create
-    - validation
-    - always
-
 - name: Fail if snapshot creation failed
   ansible.builtin.fail:
     msg: "Snapshot creation failed: {{ snapshot_status.resources[0].status.error.message | default('Unknown error') }}"
   when: >
-    snapshot_status.resources is defined and
-    snapshot_status.resources | length > 0 and
+    snapshot_status.resources | default([]) | length > 0 and
     snapshot_status.resources[0].status.error is defined
   tags:
     - create
