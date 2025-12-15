@@ -69,8 +69,8 @@
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
         name: ../roles/ocp_virt_snapshot
-        vars:
-          snapshot_name: "{{ snapshot_name }}"
+      vars:
+        snapshot_name: "{{ snapshot_name }}"
       # Using relative path to ensure local role is used
 
     - name: Display snapshot creation summary
