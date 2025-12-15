@@ -1,7 +1,5 @@
 ---
 # OCP Virtualization Snapshot Role - Main Entry Point
-# Updated: December 15, 2025 - AAP Compatible
-# This role creates snapshots for KubeVirt virtual machines in OpenShift
 
 - name: Validate required variables
   ansible.builtin.assert:
@@ -9,15 +7,17 @@
       - vm_name is defined
       - vm_namespace is defined
     fail_msg: "Required variables (vm_name, vm_namespace) must be defined"
-    success_msg: "All required variables are defined"
-  tags:
-    - always
-    - validation
-    - ocp_virt_snapshot
+
+- name: Set timestamp fact
+  ansible.builtin.set_fact:
+    snapshot_timestamp: "{{ ansible_date_time.epoch }}"
+
+- name: Generate snapshot name if not provided
+  ansible.builtin.set_fact:
+    snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
+  when: >
+    snapshot_name is not defined or
+    (snapshot_name | default('') | string | trim | length == 0)
 
 - name: Include create snapshot tasks
   ansible.builtin.include_tasks: create.yml
-  tags:
-    - create
-    - snapshot
-    - ocp_virt_snapshot

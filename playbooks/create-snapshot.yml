@@ -1,48 +1,11 @@
 ---
 # AAP Job Template Playbook: Create VM Snapshot
-# Simple playbook for Ansible Automation Platform
 
 - name: Create KubeVirt VM Snapshot
   hosts: localhost
   gather_facts: yes
   
   tasks:
-    - name: Set timestamp fact
-      ansible.builtin.set_fact:
-        snapshot_timestamp: "{{ ansible_date_time.epoch }}"
-    
-    - name: Generate snapshot name if not provided
-      ansible.builtin.set_fact:
-        snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-      when: >
-        snapshot_name is not defined or
-        (snapshot_name | default('') | string | trim | length == 0)
-    
-    - name: Ensure snapshot name is set before calling role
-      ansible.builtin.set_fact:
-        snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-      when: >
-        snapshot_name is not defined or
-        (snapshot_name | default('') | string | trim | length == 0)
-    
-    - name: Display job information
-      ansible.builtin.debug:
-        msg:
-          - "VM: {{ vm_name }}"
-          - "Namespace: {{ vm_namespace }}"
-          - "Snapshot: {{ snapshot_name }}"
-
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
         name: ../roles/ocp_virt_snapshot
-      vars:
-        snapshot_name: "{{ snapshot_name }}"
-        vm_name: "{{ vm_name }}"
-        vm_namespace: "{{ vm_namespace }}"
-
-    - name: Display result
-      ansible.builtin.debug:
-        msg:
-          - "Snapshot created: {{ snapshot_info.snapshot_name }}"
-          - "Status: {{ snapshot_info.status }}"
-      when: snapshot_info is defined
