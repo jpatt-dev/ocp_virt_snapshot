@@ -25,8 +25,11 @@
 
     - name: Set snapshot name if not provided
       ansible.builtin.set_fact:
-        snapshot_name: "aap-snapshot-{{ ansible_date_time.epoch }}"
-      when: (snapshot_name is not defined) or (snapshot_name | default('') | length == 0)
+        snapshot_name: "{% if snapshot_name is defined and snapshot_name | length > 0 %}{{ snapshot_name }}{% else %}aap-snapshot-{{ ansible_date_time.epoch }}{% endif %}"
+
+    - name: Display snapshot name
+      ansible.builtin.debug:
+        msg: "Snapshot will be named: {{ snapshot_name }}"
 
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:

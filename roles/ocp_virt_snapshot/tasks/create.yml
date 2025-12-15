@@ -176,7 +176,7 @@
       apiVersion: snapshot.kubevirt.io/v1alpha1
       kind: VirtualMachineSnapshot
       metadata:
-        name: "{{ snapshot_name | default('snapshot-' + ansible_date_time.epoch) }}"
+        name: "{{ snapshot_name }}"
         namespace: "{{ vm_namespace }}"
         labels:
           created-by: ansible
