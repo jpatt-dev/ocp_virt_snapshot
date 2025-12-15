@@ -37,7 +37,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: vm_info
-  no_log: "{{ password is defined or api_key is defined }}"
+  # no_log temporarily removed to debug authentication issues
   changed_when: false
   tags:
     - create
@@ -97,7 +97,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: existing_snapshot
-  no_log: "{{ password is defined or api_key is defined }}"
+  # no_log temporarily removed to debug authentication issues
   changed_when: false
   when: snapshot_name is defined
   tags:
@@ -131,7 +131,7 @@
     username: "{{ username | default(omit) }}"
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
-  no_log: "{{ password is defined or api_key is defined }}"
+  # no_log temporarily removed to debug authentication issues
   when: >
     snapshot_name is defined and
     existing_snapshot.resources | length > 0 and
@@ -155,7 +155,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: deletion_check
-  no_log: "{{ password is defined or api_key is defined }}"
+  # no_log temporarily removed to debug authentication issues
   changed_when: false
   until: deletion_check.resources | length == 0
   retries: 10
@@ -194,7 +194,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: snapshot_result
-  no_log: "{{ password is defined or api_key is defined }}"
+  # no_log temporarily removed to debug authentication issues
   tags:
     - create
     - snapshot
