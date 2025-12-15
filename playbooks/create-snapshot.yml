@@ -7,9 +7,13 @@
   gather_facts: yes
   
   tasks:
+    - name: Set timestamp fact
+      ansible.builtin.set_fact:
+        snapshot_timestamp: "{{ ansible_date_time.epoch }}"
+    
     - name: Generate snapshot name if not provided
       ansible.builtin.set_fact:
-        snapshot_name: "aap-snapshot-{{ ansible_date_time.epoch }}"
+        snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
       when: (snapshot_name is not defined) or (snapshot_name == '')
     
     - name: Display job information
