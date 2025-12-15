@@ -1,55 +1,31 @@
 ---
 # AAP Job Template Playbook: Create VM Snapshot
-# This playbook is for use in an Ansible Automation Platform Job Template
-# It handles VMs with single or multiple volumes/disks automatically
+# Simple playbook for Ansible Automation Platform
 
-- name: Create KubeVirt Snapshot via AAP
+- name: Create KubeVirt VM Snapshot
   hosts: localhost
   gather_facts: yes
   
-  # Variables should be provided via AAP Job Template Extra Variables or Survey
-  # Required variables:
-  #   vm_name: my-vm-name
-  #   vm_namespace: my-namespace
-  #   kubeconfig: ~/.kube/config (or use context/host+credentials)
-  #   snapshot_name: backup-20240115 (optional, auto-generated if not provided)
-
   tasks:
-    - name: Set timestamp fact for snapshot naming
+    - name: Generate snapshot name if not provided
       ansible.builtin.set_fact:
-        snapshot_timestamp: "{{ ansible_date_time.epoch }}"
+        snapshot_name: "aap-snapshot-{{ ansible_date_time.epoch }}"
+      when: snapshot_name is not defined or snapshot_name | length == 0
     
-    - name: Generate snapshot name if not provided or contains template pattern
-      ansible.builtin.set_fact:
-        snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-      when: >
-        snapshot_name is not defined or
-        (snapshot_name | string | trim | length == 0) or
-        ('ansible_date_time.epoch' in (snapshot_name | default('') | string))
-    
+    - name: Display job information
+      ansible.builtin.debug:
+        msg:
+          - "VM: {{ vm_name }}"
+          - "Namespace: {{ vm_namespace }}"
+          - "Snapshot: {{ snapshot_name }}"
+
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
         name: ../roles/ocp_virt_snapshot
-      # Using relative path to ensure local role is used
 
-    - name: Display snapshot creation summary
+    - name: Display result
       ansible.builtin.debug:
         msg:
-          - "=== Snapshot Creation Summary ==="
-          - "VM Name: {{ snapshot_info.vm_name }}"
-          - "Namespace: {{ snapshot_info.vm_namespace }}"
-          - "Snapshot Name: {{ snapshot_info.snapshot_name }}"
-          - "Snapshot UID: {{ snapshot_info.snapshot_uid }}"
-          - "Status: {{ snapshot_info.snapshot_phase }}"
-          - "Disks Included: {{ snapshot_info.vm_disks_count | default('N/A') }}"
-          - "Note: {{ snapshot_info.note }}"
-      when: snapshot_info is defined
-
-    - name: Verify snapshot was created
-      ansible.builtin.assert:
-        that:
-          - snapshot_created | default(false) | bool
-          - snapshot_info.status == "success"
-        fail_msg: "Snapshot creation failed or verification unsuccessful"
-        success_msg: "Snapshot created and verified successfully"
+          - "Snapshot created: {{ snapshot_info.snapshot_name }}"
+          - "Status: {{ snapshot_info.status }}"
       when: snapshot_info is defined

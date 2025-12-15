@@ -1,29 +1,7 @@
 ---
-# Create KubeVirt VirtualMachineSnapshot Tasks
+# Create KubeVirt VirtualMachineSnapshot - Simplified
 
-- name: Validate VM name is provided
-  ansible.builtin.assert:
-    that:
-      - vm_name is defined
-    fail_msg: "vm_name must be defined"
-    success_msg: "VM name is provided"
-  tags:
-    - create
-    - validation
-    - always
-
-- name: Validate namespace is provided
-  ansible.builtin.assert:
-    that:
-      - vm_namespace is defined
-    fail_msg: "vm_namespace must be defined"
-    success_msg: "VM namespace is provided"
-  tags:
-    - create
-    - validation
-    - always
-
-- name: Get VirtualMachine resource
+- name: Get VirtualMachine info
   kubernetes.core.k8s_info:
     api_version: kubevirt.io/v1
     kind: VirtualMachine
@@ -37,159 +15,11 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: vm_info
-  no_log: true
-  changed_when: false
-  tags:
-    - create
-    - facts
-    - ocp_virt_snapshot
 
 - name: Fail if VM not found
   ansible.builtin.fail:
-    msg: "VirtualMachine '{{ vm_name }}' not found in namespace '{{ vm_namespace }}'"
+    msg: "VM '{{ vm_name }}' not found in namespace '{{ vm_namespace }}'"
   when: vm_info.resources | length == 0
-  tags:
-    - create
-    - validation
-    - always
-
-- name: Set target VM fact
-  ansible.builtin.set_fact:
-    target_vm_name: "{{ vm_name }}"
-    target_vm_namespace: "{{ vm_namespace }}"
-  tags:
-    - create
-    - facts
-    - ocp_virt_snapshot
-
-- name: Get VM disk information
-  ansible.builtin.set_fact:
-    vm_disks: "{{ vm_info.resources[0].spec.template.spec.domain.devices.disks | default([]) }}"
-    vm_disks_count: "{{ vm_info.resources[0].spec.template.spec.domain.devices.disks | default([]) | length }}"
-  tags:
-    - create
-    - facts
-    - ocp_virt_snapshot
-
-- name: Display VM disk information
-  ansible.builtin.debug:
-    msg:
-      - "VM: {{ target_vm_name }}"
-      - "Namespace: {{ target_vm_namespace }}"
-      - "Total disks: {{ vm_disks_count }}"
-      - "All disks will be included in the snapshot"
-  tags:
-    - create
-    - debug
-    - ocp_virt_snapshot
-
-- name: Check if snapshot already exists
-  kubernetes.core.k8s_info:
-    api_version: snapshot.kubevirt.io/v1alpha1
-    kind: VirtualMachineSnapshot
-    name: "{{ snapshot_name }}"
-    namespace: "{{ vm_namespace }}"
-    kubeconfig: "{{ kubeconfig | default(omit) }}"
-    context: "{{ context | default(omit) }}"
-    host: "{{ host | default(omit) }}"
-    api_key: "{{ api_key | default(omit) }}"
-    username: "{{ username | default(omit) }}"
-    password: "{{ password | default(omit) }}"
-    validate_certs: "{{ validate_certs | default(true) }}"
-  register: existing_snapshot
-  no_log: true
-  changed_when: false
-  when: >
-    snapshot_name is defined and
-    (snapshot_name | string | length) > 0
-  tags:
-    - create
-    - check
-    - ocp_virt_snapshot
-
-- name: Fail if snapshot already exists and snapshot_force is false
-  ansible.builtin.fail:
-    msg: "VirtualMachineSnapshot '{{ snapshot_name }}' already exists in namespace '{{ vm_namespace }}'. Set snapshot_force=true to overwrite."
-  when: >
-    snapshot_name is defined and
-    snapshot_name | default('') | length > 0 and
-    existing_snapshot.resources | length > 0 and
-    not (snapshot_force | default(false))
-  tags:
-    - create
-    - validation
-    - always
-
-- name: Delete existing snapshot if force is enabled
-  kubernetes.core.k8s:
-    state: absent
-    api_version: snapshot.kubevirt.io/v1alpha1
-    kind: VirtualMachineSnapshot
-    name: "{{ snapshot_name }}"
-    namespace: "{{ vm_namespace }}"
-    kubeconfig: "{{ kubeconfig | default(omit) }}"
-    context: "{{ context | default(omit) }}"
-    host: "{{ host | default(omit) }}"
-    api_key: "{{ api_key | default(omit) }}"
-    username: "{{ username | default(omit) }}"
-    password: "{{ password | default(omit) }}"
-    validate_certs: "{{ validate_certs | default(true) }}"
-  register: delete_result
-  no_log: true
-  ignore_errors: true
-  when: >
-    snapshot_name is defined and
-    (snapshot_name | string | trim | length > 0) and
-    existing_snapshot.resources | length > 0 and
-    (snapshot_force | default(false))
-  tags:
-    - create
-    - snapshot
-    - ocp_virt_snapshot
-
-- name: Fail if snapshot deletion failed
-  ansible.builtin.fail:
-    msg: >
-      Failed to delete existing snapshot '{{ snapshot_name }}' in namespace '{{ vm_namespace }}'.
-      The snapshot may have finalizers preventing deletion, be in use, or there may be insufficient permissions.
-      Try manually deleting the snapshot first, or check if it's being used by another resource.
-  when: >
-    delete_result is defined and
-    (delete_result.failed | default(false)) and
-    snapshot_name is defined and
-    (snapshot_name | string | trim | length > 0)
-  tags:
-    - create
-    - validation
-    - always
-
-- name: Wait for snapshot deletion if force enabled
-  kubernetes.core.k8s_info:
-    api_version: snapshot.kubevirt.io/v1alpha1
-    kind: VirtualMachineSnapshot
-    name: "{{ snapshot_name }}"
-    namespace: "{{ vm_namespace }}"
-    kubeconfig: "{{ kubeconfig | default(omit) }}"
-    context: "{{ context | default(omit) }}"
-    host: "{{ host | default(omit) }}"
-    api_key: "{{ api_key | default(omit) }}"
-    username: "{{ username | default(omit) }}"
-    password: "{{ password | default(omit) }}"
-    validate_certs: "{{ validate_certs | default(true) }}"
-  register: deletion_check
-  no_log: true
-  changed_when: false
-  until: deletion_check.resources | length == 0
-  retries: 10
-  delay: 2
-  when: >
-    snapshot_name is defined and
-    existing_snapshot.resources | length > 0 and
-    (snapshot_force | default(false))
-  tags:
-    - create
-    - snapshot
-    - ocp_virt_snapshot
 
 - name: Create VirtualMachineSnapshot
   kubernetes.core.k8s:
@@ -203,7 +33,6 @@
         labels:
           created-by: ansible
           created-date: "{{ ansible_date_time.date | replace('-', '') }}"
-          created-time: "{{ ansible_date_time.epoch }}"
       spec:
         source:
           apiGroup: kubevirt.io
@@ -217,11 +46,6 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: snapshot_result
-  no_log: true
-  tags:
-    - create
-    - snapshot
-    - ocp_virt_snapshot
 
 - name: Wait for snapshot to be ready
   kubernetes.core.k8s_info:
@@ -237,68 +61,27 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: snapshot_status
-  no_log: true
-  changed_when: false
   until: >
-    snapshot_status.resources | default([]) | length > 0
-  retries: 12
-  delay: 5
-  tags:
-    - create
-    - snapshot
-    - ocp_virt_snapshot
-
-- name: Fail if snapshot creation failed
-  ansible.builtin.fail:
-    msg: "Snapshot creation failed: {{ snapshot_status.resources[0].status.error.message | default('Unknown error') }}"
-  when: >
-    snapshot_status.resources | default([]) | length > 0 and
+    snapshot_status.resources | length > 0 and
     snapshot_status.resources[0].status is defined and
-    snapshot_status.resources[0].status.error is defined
-  tags:
-    - create
-    - validation
-    - always
+    (snapshot_status.resources[0].status.readyToUse | default(false) | bool or
+     snapshot_status.resources[0].status.error is defined)
+  retries: 30
+  delay: 5
 
-- name: Display snapshot creation result
-  ansible.builtin.debug:
-    msg:
-      - "Snapshot created successfully"
-      - "VM: {{ target_vm_name }}"
-      - "Namespace: {{ target_vm_namespace }}"
-      - "Snapshot Name: {{ snapshot_status.resources[0].metadata.name }}"
-      - "Snapshot UID: {{ snapshot_status.resources[0].metadata.uid }}"
-      - "Status: {{ snapshot_status.resources[0].status.phase | default('Unknown') }}"
-      - "Ready: {{ snapshot_status.resources[0].status.ready | default(false) }}"
-      - "All VM disks/volumes included in snapshot"
+- name: Fail if snapshot has error
+  ansible.builtin.fail:
+    msg: "Snapshot failed: {{ snapshot_status.resources[0].status.error.message | default('Unknown error') }}"
   when: >
-    snapshot_status.resources is defined and
-    snapshot_status.resources | length > 0
-  tags:
-    - create
-    - debug
-    - ocp_virt_snapshot
+    snapshot_status.resources | length > 0 and
+    snapshot_status.resources[0].status.error is defined
 
-- name: Set snapshot creation result fact
+- name: Set snapshot info fact
   ansible.builtin.set_fact:
     snapshot_created: true
     snapshot_info:
-      vm_name: "{{ target_vm_name }}"
-      vm_namespace: "{{ target_vm_namespace }}"
-      snapshot_name: "{{ snapshot_status.resources[0].metadata.name }}"
+      vm_name: "{{ vm_name }}"
+      vm_namespace: "{{ vm_namespace }}"
+      snapshot_name: "{{ snapshot_name }}"
       snapshot_uid: "{{ snapshot_status.resources[0].metadata.uid }}"
-      snapshot_phase: "{{ snapshot_status.resources[0].status.phase | default('Unknown') }}"
-      snapshot_ready: "{{ snapshot_status.resources[0].status.ready | default(false) }}"
-      created_at: "{{ snapshot_status.resources[0].metadata.creationTimestamp }}"
-      action: "created"
       status: "success"
-      vm_disks_count: "{{ vm_disks_count }}"
-      note: "All VM disks/volumes are automatically included in KubeVirt snapshots"
-  when: >
-    snapshot_status.resources is defined and
-    snapshot_status.resources | length > 0
-  tags:
-    - create
-    - facts
-    - ocp_virt_snapshot
-    - always
