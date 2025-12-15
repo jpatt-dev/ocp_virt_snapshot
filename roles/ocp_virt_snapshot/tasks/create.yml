@@ -199,7 +199,6 @@
     - create
     - snapshot
     - ocp_virt_snapshot
-    - never
 
 - name: Wait for snapshot to be ready
   kubernetes.core.k8s_info:
