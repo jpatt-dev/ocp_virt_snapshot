@@ -237,12 +237,8 @@
   no_log: true
   changed_when: false
   until: >
-    snapshot_status.resources | default([]) | length > 0 and
-    (
-      (snapshot_status.resources[0].status.ready | default(false) | bool) or
-      (snapshot_status.resources[0].status.error is defined)
-    )
-  retries: 30
+    snapshot_status.resources | default([]) | length > 0
+  retries: 12
   delay: 5
   tags:
     - create
@@ -254,6 +250,7 @@
     msg: "Snapshot creation failed: {{ snapshot_status.resources[0].status.error.message | default('Unknown error') }}"
   when: >
     snapshot_status.resources | default([]) | length > 0 and
+    snapshot_status.resources[0].status is defined and
     snapshot_status.resources[0].status.error is defined
   tags:
     - create
