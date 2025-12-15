@@ -51,7 +51,7 @@
         snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
       when: >
         (snapshot_name is not defined) or
-        (_snapshot_str | length == 0) or
+        (snapshot_name | default('') | length == 0) or
         (_has_template | bool)
     
     - name: Display final snapshot name
@@ -65,6 +65,15 @@
       ansible.builtin.set_fact:
         snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
       when: "'ansible_date_time.epoch' in (snapshot_name | string)"
+    
+    - name: Ensure snapshot_name is set before calling role
+      ansible.builtin.assert:
+        that:
+          - snapshot_name is defined
+          - snapshot_name | length > 0
+          - "'ansible_date_time.epoch' not in (snapshot_name | string)"
+        fail_msg: "snapshot_name is not properly set: '{{ snapshot_name | default('UNDEFINED') }}'"
+        success_msg: "snapshot_name is valid: {{ snapshot_name }}"
     
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:

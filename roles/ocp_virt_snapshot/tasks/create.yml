@@ -99,7 +99,9 @@
   register: existing_snapshot
   # no_log temporarily removed to debug authentication issues
   changed_when: false
-  when: snapshot_name is defined
+  when: >
+    snapshot_name is defined and
+    (snapshot_name | string | length) > 0
   tags:
     - create
     - check
@@ -110,6 +112,7 @@
     msg: "VirtualMachineSnapshot '{{ snapshot_name }}' already exists in namespace '{{ vm_namespace }}'. Set snapshot_force=true to overwrite."
   when: >
     snapshot_name is defined and
+    snapshot_name | default('') | length > 0 and
     existing_snapshot.resources | length > 0 and
     not (snapshot_force | default(false))
   tags:
