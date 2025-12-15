@@ -42,22 +42,28 @@
         _snapshot_name_valid: "{{ _snapshot_name_str is regex('^aap-snapshot-\\d+$') }}"
         _has_template_pattern: "{{ 'ansible_date_time.epoch' in _snapshot_name_str }}"
     
+    - name: Determine if snapshot name needs regeneration
+      ansible.builtin.set_fact:
+        _should_regenerate: >-
+          {{
+            snapshot_name is not defined or
+            _snapshot_name_str | length == 0 or
+            not (_snapshot_name_valid | bool) or
+            (_has_template_pattern | bool)
+          }}
+    
     - name: Debug validation results
       ansible.builtin.debug:
         msg:
           - "snapshot_name string: '{{ _snapshot_name_str }}'"
           - "Is valid format: {{ _snapshot_name_valid }}"
           - "Has template pattern: {{ _has_template_pattern }}"
-          - "Will regenerate: {{ not (_snapshot_name_valid | bool) or (_has_template_pattern | bool) or (snapshot_name is not defined) or (_snapshot_name_str | length == 0) }}"
+          - "Should regenerate: {{ _should_regenerate }}"
     
     - name: Always regenerate snapshot name using timestamp fact
       ansible.builtin.set_fact:
         snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-      when: >
-        snapshot_name is not defined or
-        _snapshot_name_str | length == 0 or
-        not (_snapshot_name_valid | bool) or
-        (_has_template_pattern | bool)
+      when: _should_regenerate | bool
     
     - name: Debug final snapshot_name value
       ansible.builtin.debug:
