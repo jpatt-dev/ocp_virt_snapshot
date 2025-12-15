@@ -27,13 +27,35 @@
       ansible.builtin.set_fact:
         snapshot_timestamp: "{{ ansible_date_time.epoch }}"
     
-    - name: Set snapshot name if not provided or contains unprocessed template
+    - name: Debug current snapshot_name value
+      ansible.builtin.debug:
+        msg:
+          - "snapshot_name value: '{{ snapshot_name | default('UNDEFINED') }}'"
+          - "snapshot_name type: {{ snapshot_name | default('UNDEFINED') | type_debug }}"
+          - "Contains 'ansible_date_time.epoch': {{ 'ansible_date_time.epoch' in (snapshot_name | default('') | string) }}"
+    
+    - name: Convert snapshot_name to string for checking
+      ansible.builtin.set_fact:
+        _snapshot_name_str: "{{ snapshot_name | default('') | string }}"
+    
+    - name: Check if snapshot name contains template pattern
+      ansible.builtin.set_fact:
+        _has_template_pattern: "{{ 'ansible_date_time.epoch' in _snapshot_name_str }}"
+      when: snapshot_name is defined
+    
+    - name: Check if snapshot name needs regeneration
+      ansible.builtin.set_fact:
+        _regenerate_snapshot_name: >-
+          {{
+            snapshot_name is not defined or
+            snapshot_name | default('') | length == 0 or
+            (_has_template_pattern | default(false) | bool)
+          }}
+    
+    - name: Set snapshot name using timestamp fact
       ansible.builtin.set_fact:
         snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-      when: >
-        snapshot_name is not defined or
-        snapshot_name | default('') | length == 0 or
-        ('ansible_date_time.epoch' in (snapshot_name | default('') | string))
+      when: _regenerate_snapshot_name | bool
 
     - name: Display snapshot name
       ansible.builtin.debug:
