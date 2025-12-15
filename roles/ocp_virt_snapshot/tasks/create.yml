@@ -134,7 +134,9 @@
     username: "{{ username | default(omit) }}"
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
+  register: delete_result
   no_log: true
+  ignore_errors: true
   when: >
     snapshot_name is defined and
     existing_snapshot.resources | length > 0 and
@@ -143,6 +145,22 @@
     - create
     - snapshot
     - ocp_virt_snapshot
+
+- name: Fail if snapshot deletion failed
+  ansible.builtin.fail:
+    msg: >
+      Failed to delete existing snapshot '{{ snapshot_name }}' in namespace '{{ vm_namespace }}'.
+      The snapshot may have finalizers preventing deletion, be in use, or there may be insufficient permissions.
+      Try manually deleting the snapshot first, or check if it's being used by another resource.
+  when: >
+    snapshot_name is defined and
+    existing_snapshot.resources | length > 0 and
+    (snapshot_force | default(false)) and
+    delete_result.failed | default(false)
+  tags:
+    - create
+    - validation
+    - always
 
 - name: Wait for snapshot deletion if force enabled
   kubernetes.core.k8s_info:
