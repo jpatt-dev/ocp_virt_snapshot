@@ -6,14 +6,15 @@
 #   vm_namespace: namespace-name
 
 # Optional Kubernetes connection variables
-# Use one of: kubeconfig, context, or host+api_key/username+password
-kubeconfig: null  # Path to kubeconfig file
-context: null  # Kubernetes context to use
-host: null  # Kubernetes API server URL
-api_key: null  # API key for authentication
-username: null  # Username for authentication
-password: null  # Password for authentication
-validate_certs: true  # Validate SSL certificates
+# AAP will inject K8S_AUTH_* environment variables when credential is attached
+# These can be overridden if needed
+kubeconfig: "{{ lookup('env', 'K8S_AUTH_KUBECONFIG') | default(omit) }}"
+context: "{{ lookup('env', 'K8S_AUTH_CONTEXT') | default(omit) }}"
+host: "{{ lookup('env', 'K8S_AUTH_HOST') | default(omit) }}"
+api_key: "{{ lookup('env', 'K8S_AUTH_API_KEY') | default(omit) }}"
+username: "{{ lookup('env', 'K8S_AUTH_USERNAME') | default(omit) }}"
+password: "{{ lookup('env', 'K8S_AUTH_PASSWORD') | default(omit) }}"
+validate_certs: "{{ lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('yes') }}"
 
 # Snapshot creation defaults
 snapshot_name: null
