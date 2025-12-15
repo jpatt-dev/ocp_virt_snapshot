@@ -139,6 +139,7 @@
   ignore_errors: true
   when: >
     snapshot_name is defined and
+    (snapshot_name | string | trim | length > 0) and
     existing_snapshot.resources | length > 0 and
     (snapshot_force | default(false))
   tags:
@@ -154,7 +155,9 @@
       Try manually deleting the snapshot first, or check if it's being used by another resource.
   when: >
     delete_result is defined and
-    (delete_result.failed | default(false))
+    (delete_result.failed | default(false)) and
+    snapshot_name is defined and
+    (snapshot_name | string | trim | length > 0)
   tags:
     - create
     - validation
