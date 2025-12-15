@@ -10,7 +10,9 @@
     - name: Generate snapshot name if not provided
       ansible.builtin.set_fact:
         snapshot_name: "aap-snapshot-{{ ansible_date_time.epoch }}"
-      when: snapshot_name is not defined or snapshot_name | length == 0
+      when: >
+        snapshot_name is not defined or
+        (snapshot_name | default('') | string | trim | length == 0)
     
     - name: Display job information
       ansible.builtin.debug:
