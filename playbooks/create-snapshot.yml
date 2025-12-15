@@ -25,7 +25,8 @@
 
     - name: Set snapshot name if not provided
       ansible.builtin.set_fact:
-        snapshot_name: "{% if snapshot_name is defined and snapshot_name | length > 0 %}{{ snapshot_name }}{% else %}aap-snapshot-{{ ansible_date_time.epoch }}{% endif %}"
+        snapshot_name: "aap-snapshot-{{ ansible_date_time.epoch }}"
+      when: snapshot_name is not defined or snapshot_name | length == 0
 
     - name: Display snapshot name
       ansible.builtin.debug:
