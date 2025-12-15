@@ -35,6 +35,10 @@
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
         name: ../roles/ocp_virt_snapshot
+      vars:
+        snapshot_name: "{{ snapshot_name }}"
+        vm_name: "{{ vm_name }}"
+        vm_namespace: "{{ vm_namespace }}"
 
     - name: Display result
       ansible.builtin.debug:
