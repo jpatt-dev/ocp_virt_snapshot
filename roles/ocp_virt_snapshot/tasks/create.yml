@@ -37,7 +37,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: vm_info
-  # no_log temporarily removed to debug authentication issues
+  no_log: true
   changed_when: false
   tags:
     - create
@@ -97,7 +97,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: existing_snapshot
-  # no_log temporarily removed to debug authentication issues
+  no_log: true
   changed_when: false
   when: >
     snapshot_name is defined and
@@ -134,7 +134,7 @@
     username: "{{ username | default(omit) }}"
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
-  # no_log temporarily removed to debug authentication issues
+  no_log: true
   when: >
     snapshot_name is defined and
     existing_snapshot.resources | length > 0 and
@@ -158,7 +158,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: deletion_check
-  # no_log temporarily removed to debug authentication issues
+  no_log: true
   changed_when: false
   until: deletion_check.resources | length == 0
   retries: 10
@@ -198,7 +198,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: snapshot_result
-  # no_log temporarily removed to debug authentication issues
+  no_log: true
   tags:
     - create
     - snapshot
@@ -218,7 +218,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: snapshot_status
-  # no_log temporarily removed to debug authentication issues
+  no_log: true
   changed_when: false
   until: >
     snapshot_status.resources[0].status is defined and
