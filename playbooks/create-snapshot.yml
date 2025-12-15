@@ -59,10 +59,18 @@
         msg:
           - "Final snapshot_name: '{{ snapshot_name }}'"
           - "Final snapshot_name length: {{ snapshot_name | length }}"
+          - "Contains template pattern: {{ 'ansible_date_time.epoch' in (snapshot_name | string) }}"
+    
+    - name: Force regenerate if still contains template pattern
+      ansible.builtin.set_fact:
+        snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
+      when: "'ansible_date_time.epoch' in (snapshot_name | string)"
     
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
         name: ../roles/ocp_virt_snapshot
+        vars:
+          snapshot_name: "{{ snapshot_name }}"
       # Using relative path to ensure local role is used
 
     - name: Display snapshot creation summary
