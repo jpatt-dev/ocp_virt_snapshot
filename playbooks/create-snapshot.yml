@@ -14,7 +14,16 @@
     - name: Generate snapshot name if not provided
       ansible.builtin.set_fact:
         snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-      when: (snapshot_name is not defined) or (snapshot_name == '')
+      when: >
+        snapshot_name is not defined or
+        (snapshot_name | default('') | string | trim | length == 0)
+    
+    - name: Ensure snapshot name is set before calling role
+      ansible.builtin.set_fact:
+        snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
+      when: >
+        snapshot_name is not defined or
+        (snapshot_name | default('') | string | trim | length == 0)
     
     - name: Display job information
       ansible.builtin.debug:
