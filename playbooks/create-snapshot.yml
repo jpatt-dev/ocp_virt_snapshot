@@ -26,8 +26,10 @@
     - name: Create KubeVirt snapshot
       ansible.builtin.include_role:
         name: ocp_virt_snapshot
+        tasks_from: main
       vars:
         snapshot_name: "{{ snapshot_name | default('aap-snapshot-' + ansible_date_time.epoch) }}"
+      # Using local role from ../roles/ocp_virt_snapshot - NOT from Galaxy
 
     - name: Display snapshot creation summary
       ansible.builtin.debug:
