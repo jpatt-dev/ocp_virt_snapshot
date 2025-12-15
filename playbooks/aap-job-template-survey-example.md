@@ -8,7 +8,7 @@
 - **Job Type**: `Run`
 - **Inventory**: `localhost` (or your localhost inventory)
 - **Project**: Select your project containing the playbook
-- **Playbook**: `examples/aap-job-template-create-snapshot.yml`
+- **Playbook**: `playbooks/create-snapshot.yml`
 - **Credentials**: 
   - Add OpenShift/Kubernetes credentials (OpenShift credential type)
   - Or use Machine credential type with kubeconfig content
