@@ -1,6 +1,13 @@
 ---
 # OCP Virtualization Snapshot Role - Main Entry Point
 
+- name: Debug input variables
+  ansible.builtin.debug:
+    msg:
+      - "VM Name: '{{ vm_name | default('UNDEFINED') }}'"
+      - "VM Namespace: '{{ vm_namespace | default('UNDEFINED') }}'"
+      - "Snapshot Name (input): '{{ snapshot_name | default('UNDEFINED') }}'"
+
 - name: Validate required variables
   ansible.builtin.assert:
     that:
@@ -12,12 +19,23 @@
   ansible.builtin.set_fact:
     snapshot_timestamp: "{{ ansible_date_time.epoch }}"
 
+- name: Debug timestamp
+  ansible.builtin.debug:
+    msg:
+      - "Timestamp: {{ snapshot_timestamp }}"
+
 - name: Generate snapshot name if not provided
   ansible.builtin.set_fact:
     snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
   when: >
     snapshot_name is not defined or
     (snapshot_name | default('') | string | trim | length == 0)
+
+- name: Debug final snapshot name
+  ansible.builtin.debug:
+    msg:
+      - "Final Snapshot Name: '{{ snapshot_name }}'"
+      - "Snapshot Name Length: {{ snapshot_name | length }}"
 
 - name: Include create snapshot tasks
   ansible.builtin.include_tasks: create.yml
