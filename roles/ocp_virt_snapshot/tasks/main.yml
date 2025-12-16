@@ -24,33 +24,27 @@
     msg:
       - "Timestamp: {{ snapshot_timestamp }}"
 
-- name: Always generate snapshot name (override empty strings from extra_vars)
+- name: Generate snapshot name using internal variable
   ansible.builtin.set_fact:
-    snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
-  register: snapshot_name_result
+    _snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
   when: >
     snapshot_name is not defined or
     (snapshot_name | default('') | string | trim | length == 0)
 
-- name: Debug what was set in the fact
-  ansible.builtin.debug:
-    msg:
-      - "Fact was set: {{ snapshot_name_result.ansible_facts.snapshot_name | default('NOT SET') }}"
-      - "Variable value: '{{ snapshot_name | default('UNDEFINED') }}'"
-  when: snapshot_name_result is defined
-
-- name: Force snapshot name to use the generated value
+- name: Use provided snapshot name if valid
   ansible.builtin.set_fact:
-    snapshot_name: "{{ snapshot_name_result.ansible_facts.snapshot_name }}"
+    _snapshot_name: "{{ snapshot_name }}"
   when: >
-    snapshot_name_result is defined and
-    snapshot_name_result.ansible_facts.snapshot_name is defined
+    snapshot_name is defined and
+    (snapshot_name | default('') | string | trim | length > 0)
 
 - name: Debug final snapshot name before include
   ansible.builtin.debug:
     msg:
-      - "Final Snapshot Name: '{{ snapshot_name }}'"
-      - "Snapshot Name Length: {{ snapshot_name | length }}"
+      - "Final Snapshot Name: '{{ _snapshot_name }}'"
+      - "Snapshot Name Length: {{ _snapshot_name | length }}"
 
 - name: Include create snapshot tasks
   ansible.builtin.include_tasks: create.yml
+  vars:
+    snapshot_name: "{{ _snapshot_name }}"
