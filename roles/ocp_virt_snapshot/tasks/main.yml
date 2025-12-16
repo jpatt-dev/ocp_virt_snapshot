@@ -10,7 +10,7 @@
 
 - name: Generate snapshot name from timestamp
   ansible.builtin.set_fact:
-    snapshot_name: "aap-snapshot-{{ ansible_date_time.epoch }}"
+    snapshot_name: "aap-snapshot-{{ ansible_date_time.date | replace('-', '') }}-{{ ansible_date_time.hour }}{{ ansible_date_time.minute }}{{ ansible_date_time.second }}"
 
 - name: Include create snapshot tasks
   ansible.builtin.include_tasks: create.yml
