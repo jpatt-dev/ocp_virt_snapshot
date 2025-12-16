@@ -1,6 +1,14 @@
 ---
 # Create KubeVirt VirtualMachineSnapshot - Simplified
 
+- name: Debug variables at start of create tasks
+  ansible.builtin.debug:
+    msg:
+      - "VM Name: '{{ vm_name | default('UNDEFINED') }}'"
+      - "VM Namespace: '{{ vm_namespace | default('UNDEFINED') }}'"
+      - "Snapshot Name: '{{ snapshot_name | default('UNDEFINED') }}'"
+      - "Snapshot Name Length: {{ snapshot_name | default('') | length }}"
+
 - name: Get VirtualMachine info
   kubernetes.core.k8s_info:
     api_version: kubevirt.io/v1
