@@ -17,5 +17,4 @@ password: "{{ lookup('env', 'K8S_AUTH_PASSWORD') | default(omit) }}"
 validate_certs: "{{ lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('yes') }}"
 
 # Snapshot creation defaults
-snapshot_name: null
 snapshot_force: false

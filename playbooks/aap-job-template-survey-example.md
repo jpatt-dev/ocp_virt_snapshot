@@ -23,7 +23,7 @@
 vm_name: "{{ vm_name }}"
 vm_namespace: "{{ vm_namespace }}"
 kubeconfig: "{{ kubeconfig_path }}"
-snapshot_name: "{{ snapshot_name | default('aap-snapshot-' + ansible_date_time.epoch) }}"
+# Note: snapshot_name is automatically generated as 'aap-snapshot-<timestamp>'
 ```
 
 ### Survey Configuration
@@ -43,12 +43,7 @@ Create a Survey for interactive variable input:
 - **Description**: `Kubernetes namespace where the VM exists`
 - **Default**: `default`
 
-#### Question 3: Snapshot Name
-- **Variable**: `snapshot_name`
-- **Type**: `Text`
-- **Required**: No
-- **Description**: `Name for the snapshot (auto-generated if not provided)`
-- **Default**: `aap-snapshot-{{ ansible_date_time.epoch }}`
+**Note**: The snapshot name is automatically generated as `aap-snapshot-<timestamp>` where `<timestamp>` is the Unix epoch time. No survey question is needed for the snapshot name.
 
 ### Options
 - **Enable Privilege Escalation**: No
