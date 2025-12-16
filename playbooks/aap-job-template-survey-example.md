@@ -43,7 +43,7 @@ Create a Survey for interactive variable input:
 - **Description**: `Kubernetes namespace where the VM exists`
 - **Default**: `default`
 
-**Note**: The snapshot name is automatically generated as `aap-snapshot-<timestamp>` where `<timestamp>` is the Unix epoch time. No survey question is needed for the snapshot name.
+**Note**: The snapshot name is automatically generated as `aap-snapshot-YYYYMMDD-HHMMSS` (e.g., `aap-snapshot-20251215-102235`) using UTC time. No survey question is needed for the snapshot name.
 
 ### Options
 - **Enable Privilege Escalation**: No

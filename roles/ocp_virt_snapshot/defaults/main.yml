@@ -1,20 +1,35 @@
 ---
 # OCP Virtualization Snapshot Role - Default Variables
 # Updated: December 15, 2025 - Clean version for AAP
+
 # Required variables (must be set by user or survey):
-#   vm_name: name-of-vm
-#   vm_namespace: namespace-name
+#   vm_name: (string) Name of the VirtualMachine to snapshot
+#   vm_namespace: (string) Kubernetes namespace containing the VM
 
 # Optional Kubernetes connection variables
 # AAP will inject K8S_AUTH_* environment variables when credential is attached
 # These can be overridden if needed
 kubeconfig: "{{ lookup('env', 'K8S_AUTH_KUBECONFIG') | default(omit) }}"
+  # Path to kubeconfig file. Defaults to K8S_AUTH_KUBECONFIG environment variable.
+
 context: "{{ lookup('env', 'K8S_AUTH_CONTEXT') | default(omit) }}"
+  # Kubernetes context to use. Defaults to K8S_AUTH_CONTEXT environment variable.
+
 host: "{{ lookup('env', 'K8S_AUTH_HOST') | default(omit) }}"
+  # Kubernetes API server URL. Defaults to K8S_AUTH_HOST environment variable.
+
 api_key: "{{ lookup('env', 'K8S_AUTH_API_KEY') | default(omit) }}"
+  # API key for authentication. Defaults to K8S_AUTH_API_KEY environment variable.
+
 username: "{{ lookup('env', 'K8S_AUTH_USERNAME') | default(omit) }}"
+  # Username for authentication. Defaults to K8S_AUTH_USERNAME environment variable.
+
 password: "{{ lookup('env', 'K8S_AUTH_PASSWORD') | default(omit) }}"
+  # Password for authentication. Defaults to K8S_AUTH_PASSWORD environment variable.
+
 validate_certs: "{{ lookup('env', 'K8S_AUTH_VERIFY_SSL') | default('yes') }}"
+  # Validate SSL certificates. Defaults to K8S_AUTH_VERIFY_SSL environment variable or 'yes'.
 
 # Snapshot creation defaults
 snapshot_force: false
+  # Force overwrite existing snapshot (currently unused - snapshots use timestamp-based names)

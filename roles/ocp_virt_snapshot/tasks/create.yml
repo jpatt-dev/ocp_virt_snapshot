@@ -15,6 +15,7 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: vm_info
+  changed_when: false
 
 - name: Fail if VM not found
   ansible.builtin.fail:
@@ -68,6 +69,7 @@
      snapshot_status.resources[0].status.error is defined)
   retries: 30
   delay: 5
+  changed_when: false
 
 - name: Fail if snapshot has error
   ansible.builtin.fail:
@@ -83,5 +85,8 @@
       vm_name: "{{ vm_name }}"
       vm_namespace: "{{ vm_namespace }}"
       snapshot_name: "{{ snapshot_name }}"
-      snapshot_uid: "{{ snapshot_status.resources[0].metadata.uid }}"
+      snapshot_uid: "{{ snapshot_status.resources[0].metadata.uid | default('') }}"
       status: "success"
+  when: >
+    snapshot_status.resources | default([]) | length > 0 and
+    snapshot_status.resources[0].metadata is defined
