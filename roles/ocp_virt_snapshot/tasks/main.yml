@@ -24,19 +24,14 @@
     msg:
       - "Timestamp: {{ snapshot_timestamp }}"
 
-- name: Generate snapshot name if not provided
+- name: Generate snapshot name if empty or not provided
   ansible.builtin.set_fact:
     snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
   when: >
     snapshot_name is not defined or
-    (snapshot_name | default('') | string | trim | length == 0)
+    snapshot_name | default('') | string | trim | length == 0
 
-- name: Debug snapshot name after generation
-  ansible.builtin.debug:
-    var: snapshot_name
-    verbosity: 1
-
-- name: Ensure snapshot name is always set
+- name: Force set snapshot name before include (ensure it persists)
   ansible.builtin.set_fact:
     snapshot_name: "aap-snapshot-{{ snapshot_timestamp }}"
   when: (snapshot_name | default('') | string | trim | length == 0)
@@ -49,3 +44,5 @@
 
 - name: Include create snapshot tasks
   ansible.builtin.include_tasks: create.yml
+  vars:
+    snapshot_name: "{{ snapshot_name }}"
