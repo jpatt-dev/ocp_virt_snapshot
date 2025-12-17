@@ -223,7 +223,46 @@ oc auth can-i create virtualmachinesnapshots --as=system:serviceaccount:<namespa
 
 Both commands should return `yes` if permissions are correctly configured.
 
-### 3. Ansible Requirements
+### 3. Security Considerations
+
+This role handles sensitive authentication credentials (API keys, passwords, kubeconfig files). The following security measures are implemented:
+
+#### Sensitive Data Protection
+
+- **No Logging of Credentials**: All tasks that use sensitive credentials (`api_key`, `password`, `username`, `kubeconfig`, `host`) have `no_log: true` enabled to prevent credential exposure in Ansible logs
+- **Protected Tasks**: The following tasks suppress credential logging:
+  - `Get VirtualMachine info`
+  - `Create VirtualMachineSnapshot`
+  - `Wait for snapshot to be ready`
+
+#### Best Practices
+
+1. **Use AAP Credentials**: Store Kubernetes credentials in AAP's credential store rather than passing them as extra variables
+2. **Service Account Tokens**: Prefer Service Account tokens over user credentials when possible
+3. **Environment Variables**: When using environment variables, ensure they are not logged or exposed in shell history
+4. **Kubeconfig Files**: If using kubeconfig files, ensure proper file permissions (e.g., `chmod 600 ~/.kube/config`)
+5. **Avoid Verbose Logging**: Be cautious when using `-vvv` verbose mode, as it may expose more information than necessary
+6. **Secure Storage**: Never commit credentials to version control - use `.gitignore` to exclude sensitive files
+
+#### Credential Management in AAP
+
+When configuring AAP Job Templates:
+
+- **Use OpenShift/Kubernetes Credential Type**: This is the recommended method as AAP handles credential injection securely
+- **Avoid Extra Variables for Credentials**: Do not pass `api_key`, `password`, or `kubeconfig` content via extra variables or surveys
+- **Use Environment Variables**: AAP automatically injects `K8S_AUTH_*` environment variables when a Kubernetes credential is attached
+
+#### Error Messages
+
+Error messages are designed to avoid exposing sensitive information. They only reference:
+- VM names
+- Namespace names
+- Snapshot names
+- Generic error messages from the Kubernetes API
+
+No credentials, tokens, or authentication details are included in error output.
+
+### 4. Ansible Requirements
 
 - Ansible 2.9 or higher
 - `kubernetes.core` collection (version >= 2.0.0)

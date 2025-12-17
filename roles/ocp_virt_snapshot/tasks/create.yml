@@ -16,11 +16,44 @@
     validate_certs: "{{ validate_certs | default(true) }}"
   register: vm_info
   changed_when: false
+  no_log: true
+  failed_when: false
+
+- name: Check for authentication or connection errors
+  ansible.builtin.fail:
+    msg: "Failed to connect to Kubernetes API. Check your credentials and API server URL. Verify the host URL is correct and credentials have proper permissions."
+  when: >
+    vm_info.msg is defined and
+    vm_info.msg != '' and
+    ('authentication' in (vm_info.msg | string | lower) or
+     'unauthorized' in (vm_info.msg | string | lower) or
+     'forbidden' in (vm_info.msg | string | lower) or
+     'connection' in (vm_info.msg | string | lower) or
+     'certificate' in (vm_info.msg | string | lower))
+
+- name: Check for VM API availability
+  ansible.builtin.fail:
+    msg: "KubeVirt API is not available or VirtualMachine CRD is not installed. Verify OpenShift Virtualization is properly configured."
+  when: >
+    vm_info.msg is defined and
+    vm_info.msg != '' and
+    (('not found' in (vm_info.msg | string | lower) and 'api' in (vm_info.msg | string | lower)) or
+     'does not exist' in (vm_info.msg | string | lower))
 
 - name: Fail if VM not found
   ansible.builtin.fail:
     msg: "VM '{{ vm_name }}' not found in namespace '{{ vm_namespace }}'"
-  when: vm_info.resources | length == 0
+  when: >
+    vm_info.resources is defined and
+    vm_info.resources | length == 0
+
+- name: Fail if VM info retrieval failed with other errors
+  ansible.builtin.fail:
+    msg: "Failed to retrieve VM information: {{ vm_info.msg | default('Unknown error occurred') }}"
+  when: >
+    (vm_info.failed | default(false) | bool or
+     (vm_info.msg is defined and vm_info.msg != '')) and
+    not (vm_info.resources is defined and vm_info.resources | length > 0)
 
 - name: Create VirtualMachineSnapshot
   kubernetes.core.k8s:
@@ -47,6 +80,24 @@
     password: "{{ password | default(omit) }}"
     validate_certs: "{{ validate_certs | default(true) }}"
   register: snapshot_result
+  no_log: true
+  failed_when: false
+
+- name: Check for snapshot API availability
+  ansible.builtin.fail:
+    msg: "VirtualMachineSnapshot API is not available. Verify the snapshot.kubevirt.io CRD is installed."
+  when: >
+    snapshot_result.msg is defined and
+    snapshot_result.msg != '' and
+    (('not found' in (snapshot_result.msg | string | lower) and 'api' in (snapshot_result.msg | string | lower)) or
+     'does not exist' in (snapshot_result.msg | string | lower))
+
+- name: Fail if snapshot creation failed
+  ansible.builtin.fail:
+    msg: "Failed to create snapshot '{{ snapshot_name }}' for VM '{{ vm_name }}' in namespace '{{ vm_namespace }}': {{ snapshot_result.msg | default('Unknown error occurred') }}"
+  when: >
+    snapshot_result.failed | default(false) | bool or
+    (snapshot_result.msg is defined and snapshot_result.msg != '')
 
 - name: Wait for snapshot to be ready
   kubernetes.core.k8s_info:
@@ -70,6 +121,7 @@
   retries: 30
   delay: 5
   changed_when: false
+  no_log: true
 
 - name: Fail if snapshot has error
   ansible.builtin.fail:
