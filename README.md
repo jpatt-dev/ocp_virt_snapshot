@@ -26,51 +26,286 @@ This role creates snapshots of KubeVirt VirtualMachines in OpenShift/Kubernetes 
 ### 2. Required Permissions
 
 The service account or user running this role needs the following permissions:
+- `get`, `list` on `virtualmachines.kubevirt.io` (to validate VM exists)
+- `create`, `get`, `list` on `virtualmachinesnapshots.snapshot.kubevirt.io` (to create and check snapshot status)
 
-#### Minimum Required (Namespace-scoped)
-For snapshotting VMs in a specific namespace, create a RoleBinding with the `edit` role:
+#### Service Account Configuration Options
 
+You can configure the service account to work with snapshots in one namespace, multiple specific namespaces, or all namespaces in the cluster. Choose the option that best fits your security requirements:
+
+**Configuration Comparison:**
+
+| Configuration | RBAC Type | Security Level | Use Case | Setup Complexity |
+|--------------|-----------|----------------|----------|------------------|
+| **Single Namespace** | RoleBinding | Highest (most restrictive) | Testing, single project | Simple |
+| **Multiple Namespaces** | Multiple RoleBindings | High (moderate restriction) | Production with limited scope | Moderate |
+| **All Namespaces** | ClusterRoleBinding | Lower (least restrictive) | Production with broad scope | Simple |
+
+**Quick Decision Guide:**
+- **Testing or single project?** → Use **Single Namespace** (Option 1)
+- **Multiple specific projects?** → Use **Multiple Namespaces** (Option 2)
+- **All projects or dynamic namespaces?** → Use **All Namespaces** (Option 3)
+- **Maximum security required?** → Use **Custom Minimal Permissions** (Option 4) with any of the above
+
+---
+
+#### Option 1: Single Namespace Configuration
+
+Use this when you only need to create snapshots in one specific namespace.
+
+**Step 1: Create Service Account**
+
+Create the service account in your target namespace or a dedicated namespace:
+
+```bash
+# Option A: Create in the target namespace
+oc create serviceaccount snapshot-creator -n <target-namespace>
+
+# Option B: Create in a dedicated namespace (recommended)
+oc create namespace ansible-automation
+oc create serviceaccount snapshot-creator -n ansible-automation
+```
+
+**Step 2: Create RoleBinding**
+
+Bind the `edit` ClusterRole to the service account in the target namespace:
+
+```bash
+# If service account is in the same namespace as target VMs
+oc create rolebinding snapshot-creator-binding \
+  --clusterrole=edit \
+  --serviceaccount=<target-namespace>:snapshot-creator \
+  -n <target-namespace>
+
+# If service account is in a different namespace (e.g., ansible-automation)
+oc create rolebinding snapshot-creator-binding \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n <target-namespace>
+```
+
+**Example:**
+```bash
+# Create service account in dedicated namespace
+oc create namespace ansible-automation
+oc create serviceaccount snapshot-creator -n ansible-automation
+
+# Grant permissions in vm-postbuild-config namespace
+oc create rolebinding snapshot-creator-binding \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n vm-postbuild-config
+```
+
+**YAML Alternative:**
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: snapshot-creator
+  name: snapshot-creator-binding
   namespace: <target-namespace>
 subjects:
 - kind: ServiceAccount
-  name: <service-account-name>
-  namespace: <service-account-namespace>
+  name: snapshot-creator
+  namespace: ansible-automation
 roleRef:
   kind: ClusterRole
   name: edit
   apiGroup: rbac.authorization.k8s.io
 ```
 
-**Required Permissions:**
-- `get`, `list` on `virtualmachines.kubevirt.io` (to validate VM exists)
-- `create`, `get`, `list` on `virtualmachinesnapshots.snapshot.kubevirt.io` (to create and check snapshot status)
+**Verify:**
+```bash
+# Check RoleBinding exists
+oc get rolebinding snapshot-creator-binding -n <target-namespace>
 
-#### Production Recommendation (Cluster-wide)
-For production environments where snapshots may be created across multiple namespaces, use a ClusterRoleBinding:
+# Test permissions
+oc auth can-i get virtualmachines \
+  --as=system:serviceaccount:ansible-automation:snapshot-creator \
+  -n <target-namespace>
 
+oc auth can-i create virtualmachinesnapshots \
+  --as=system:serviceaccount:ansible-automation:snapshot-creator \
+  -n <target-namespace>
+```
+
+---
+
+#### Option 2: Multiple Namespaces Configuration
+
+Use this when you need to create snapshots in multiple specific namespaces but not all namespaces.
+
+**Step 1: Create Service Account**
+
+Create the service account in a dedicated namespace:
+
+```bash
+oc create namespace ansible-automation
+oc create serviceaccount snapshot-creator -n ansible-automation
+```
+
+**Step 2: Create RoleBindings for Each Namespace**
+
+Create a RoleBinding for each namespace where you need snapshot permissions:
+
+```bash
+# Grant permissions in namespace 1
+oc create rolebinding snapshot-creator-binding-ns1 \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n <namespace-1>
+
+# Grant permissions in namespace 2
+oc create rolebinding snapshot-creator-binding-ns2 \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n <namespace-2>
+
+# Grant permissions in namespace 3
+oc create rolebinding snapshot-creator-binding-ns3 \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n <namespace-3>
+```
+
+**Example:**
+```bash
+# Create service account
+oc create namespace ansible-automation
+oc create serviceaccount snapshot-creator -n ansible-automation
+
+# Grant permissions in multiple namespaces
+oc create rolebinding snapshot-creator-vm-postbuild \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n vm-postbuild-config
+
+oc create rolebinding snapshot-creator-vm-production \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n vm-production
+
+oc create rolebinding snapshot-creator-vm-staging \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n vm-staging
+```
+
+**Bulk Creation Script:**
+```bash
+#!/bin/bash
+SERVICE_ACCOUNT_NS="ansible-automation"
+SERVICE_ACCOUNT="snapshot-creator"
+NAMESPACES=("vm-postbuild-config" "vm-production" "vm-staging" "vm-development")
+
+for namespace in "${NAMESPACES[@]}"; do
+  oc create rolebinding snapshot-creator-${namespace//-/_} \
+    --clusterrole=edit \
+    --serviceaccount=${SERVICE_ACCOUNT_NS}:${SERVICE_ACCOUNT} \
+    -n ${namespace}
+done
+```
+
+**Verify:**
+```bash
+# List all RoleBindings for the service account
+oc get rolebinding -A -o json | \
+  jq -r '.items[] | select(.subjects[]?.name=="snapshot-creator") | "\(.metadata.namespace) \(.metadata.name)"'
+
+# Test permissions in each namespace
+for ns in vm-postbuild-config vm-production vm-staging; do
+  echo "Testing $ns:"
+  oc auth can-i create virtualmachinesnapshots \
+    --as=system:serviceaccount:ansible-automation:snapshot-creator \
+    -n $ns
+done
+```
+
+---
+
+#### Option 3: All Namespaces Configuration (Cluster-Wide)
+
+Use this when you need to create snapshots in any namespace across the cluster. This is the simplest setup but provides the broadest access.
+
+**Step 1: Create Service Account**
+
+Create the service account in a dedicated namespace:
+
+```bash
+oc create namespace ansible-automation
+oc create serviceaccount snapshot-creator -n ansible-automation
+```
+
+**Step 2: Create ClusterRoleBinding**
+
+Create a single ClusterRoleBinding to grant permissions across all namespaces:
+
+```bash
+oc create clusterrolebinding snapshot-creator-cluster-binding \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator
+```
+
+**Example:**
+```bash
+# Create service account
+oc create namespace ansible-automation
+oc create serviceaccount snapshot-creator -n ansible-automation
+
+# Grant cluster-wide permissions
+oc create clusterrolebinding snapshot-creator-cluster-binding \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator
+```
+
+**YAML Alternative:**
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: snapshot-creator-cluster
+  name: snapshot-creator-cluster-binding
 subjects:
 - kind: ServiceAccount
-  name: <service-account-name>
-  namespace: <service-account-namespace>
+  name: snapshot-creator
+  namespace: ansible-automation
 roleRef:
   kind: ClusterRole
   name: edit
   apiGroup: rbac.authorization.k8s.io
 ```
 
-**Note:** The `edit` ClusterRole provides sufficient permissions for snapshot operations. For more restrictive access, create a custom ClusterRole with only the required permissions:
+**Verify:**
+```bash
+# Check ClusterRoleBinding exists
+oc get clusterrolebinding snapshot-creator-cluster-binding
 
-```yaml
+# Test permissions in multiple namespaces
+oc auth can-i get virtualmachines \
+  --as=system:serviceaccount:ansible-automation:snapshot-creator \
+  -n <any-namespace>
+
+oc auth can-i create virtualmachinesnapshots \
+  --as=system:serviceaccount:ansible-automation:snapshot-creator \
+  -n <any-namespace>
+```
+
+---
+
+#### Option 4: Custom Minimal Permissions (Most Secure)
+
+For enhanced security, create a custom ClusterRole with only the minimum required permissions instead of using the `edit` role.
+
+**Step 1: Create Service Account**
+
+```bash
+oc create namespace ansible-automation
+oc create serviceaccount snapshot-creator -n ansible-automation
+```
+
+**Step 2: Create Custom ClusterRole**
+
+```bash
+cat <<EOF | oc apply -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -91,98 +326,86 @@ rules:
   - create
   - get
   - list
+EOF
 ```
 
-#### Step-by-Step Setup Instructions
+**Step 3: Create ClusterRoleBinding or RoleBinding**
 
-**Option 1: Namespace-Scoped Setup (Recommended for Testing)**
+For all namespaces:
+```bash
+oc create clusterrolebinding snapshot-creator-custom-binding \
+  --clusterrole=kubevirt-snapshot-creator \
+  --serviceaccount=ansible-automation:snapshot-creator
+```
 
-1. Create a Service Account in your target namespace:
-   ```bash
-   oc create serviceaccount snapshot-creator -n <target-namespace>
-   ```
+For a single namespace:
+```bash
+oc create rolebinding snapshot-creator-custom-binding \
+  --clusterrole=kubevirt-snapshot-creator \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n <target-namespace>
+```
 
-2. Create a RoleBinding to grant the `edit` role to the Service Account:
-   ```bash
-   oc create rolebinding snapshot-creator-binding \
-     --clusterrole=edit \
-     --serviceaccount=<target-namespace>:snapshot-creator \
-     -n <target-namespace>
-   ```
+For multiple namespaces, create a RoleBinding in each namespace using the custom ClusterRole.
 
-3. Verify the Service Account was created:
-   ```bash
-   oc get serviceaccount snapshot-creator -n <target-namespace>
-   ```
+---
 
-4. Verify the RoleBinding was created:
-   ```bash
-   oc get rolebinding snapshot-creator-binding -n <target-namespace>
-   ```
+#### Migrating Between Configurations
 
-**Option 2: Cluster-Wide Setup (Recommended for Production)**
+**From Single Namespace to Multiple Namespaces:**
 
-1. Create a Service Account in a dedicated namespace (e.g., `ansible-automation`):
-   ```bash
-   oc create namespace ansible-automation
-   oc create serviceaccount snapshot-creator -n ansible-automation
-   ```
+Add additional RoleBindings for each new namespace:
 
-2. Create a ClusterRoleBinding to grant cluster-wide `edit` permissions:
+```bash
+# Existing RoleBinding in namespace-1 (keep this)
+# Add new RoleBinding for namespace-2
+oc create rolebinding snapshot-creator-binding-ns2 \
+  --clusterrole=edit \
+  --serviceaccount=ansible-automation:snapshot-creator \
+  -n <namespace-2>
+```
+
+**From Single/Multiple Namespaces to All Namespaces:**
+
+1. Create the ClusterRoleBinding:
    ```bash
    oc create clusterrolebinding snapshot-creator-cluster-binding \
      --clusterrole=edit \
      --serviceaccount=ansible-automation:snapshot-creator
    ```
 
-3. Verify the Service Account was created:
+2. Verify it works across all namespaces:
    ```bash
-   oc get serviceaccount snapshot-creator -n ansible-automation
+   oc auth can-i create virtualmachinesnapshots \
+     --as=system:serviceaccount:ansible-automation:snapshot-creator \
+     -n <test-namespace>
    ```
 
-4. Verify the ClusterRoleBinding was created:
+3. (Optional) Remove old namespace-scoped RoleBindings:
    ```bash
-   oc get clusterrolebinding snapshot-creator-cluster-binding
+   # List all RoleBindings for the service account
+   oc get rolebinding -A -o json | \
+     jq -r '.items[] | select(.subjects[]?.name=="snapshot-creator") | "\(.metadata.namespace) \(.metadata.name)"'
+   
+   # Delete each one (replace with actual namespace and name)
+   oc delete rolebinding <rolebinding-name> -n <namespace>
    ```
 
-**Option 3: Custom Minimal Permissions (Most Secure)**
+**From All Namespaces to Multiple Namespaces:**
 
-1. Create a Service Account:
+1. Delete the ClusterRoleBinding:
    ```bash
-   oc create serviceaccount snapshot-creator -n <namespace>
+   oc delete clusterrolebinding snapshot-creator-cluster-binding
    ```
 
-2. Create the custom ClusterRole with minimal permissions using YAML:
+2. Create RoleBindings for each required namespace:
    ```bash
-   cat <<EOF | oc apply -f -
-   apiVersion: rbac.authorization.k8s.io/v1
-   kind: ClusterRole
-   metadata:
-     name: kubevirt-snapshot-creator
-   rules:
-   - apiGroups:
-     - kubevirt.io
-     resources:
-     - virtualmachines
-     verbs:
-     - get
-     - list
-   - apiGroups:
-     - snapshot.kubevirt.io
-     resources:
-     - virtualmachinesnapshots
-     verbs:
-     - create
-     - get
-     - list
-   EOF
-   ```
-
-3. Create a ClusterRoleBinding:
-   ```bash
-   oc create clusterrolebinding snapshot-creator-custom-binding \
-     --clusterrole=kubevirt-snapshot-creator \
-     --serviceaccount=<namespace>:snapshot-creator
+   for ns in namespace-1 namespace-2 namespace-3; do
+     oc create rolebinding snapshot-creator-${ns} \
+       --clusterrole=edit \
+       --serviceaccount=ansible-automation:snapshot-creator \
+       -n ${ns}
+   done
    ```
 
 **Using the Service Account Token in AAP**
@@ -211,17 +434,110 @@ After creating the Service Account, you need to extract the token for use in AAP
 
 **Verifying Permissions**
 
-Test that the Service Account has the required permissions:
+After configuring your service account, verify that it has the required permissions in the target namespace(s).
+
+**For Single Namespace Configuration:**
 
 ```bash
+# Replace with your actual service account namespace and target namespace
+SERVICE_ACCOUNT_NS="ansible-automation"
+TARGET_NS="vm-postbuild-config"
+
 # Test VM access
-oc auth can-i get virtualmachines --as=system:serviceaccount:<namespace>:snapshot-creator -n <target-namespace>
+oc auth can-i get virtualmachines \
+  --as=system:serviceaccount:${SERVICE_ACCOUNT_NS}:snapshot-creator \
+  -n ${TARGET_NS}
 
 # Test snapshot creation
-oc auth can-i create virtualmachinesnapshots --as=system:serviceaccount:<namespace>:snapshot-creator -n <target-namespace>
+oc auth can-i create virtualmachinesnapshots \
+  --as=system:serviceaccount:${SERVICE_ACCOUNT_NS}:snapshot-creator \
+  -n ${TARGET_NS}
+
+# Both commands should return `yes`
 ```
 
-Both commands should return `yes` if permissions are correctly configured.
+**For Multiple Namespaces Configuration:**
+
+```bash
+SERVICE_ACCOUNT_NS="ansible-automation"
+NAMESPACES=("vm-postbuild-config" "vm-production" "vm-staging")
+
+for ns in "${NAMESPACES[@]}"; do
+  echo "Testing permissions in namespace: ${ns}"
+  
+  # Test VM access
+  oc auth can-i get virtualmachines \
+    --as=system:serviceaccount:${SERVICE_ACCOUNT_NS}:snapshot-creator \
+    -n ${ns}
+  
+  # Test snapshot creation
+  oc auth can-i create virtualmachinesnapshots \
+    --as=system:serviceaccount:${SERVICE_ACCOUNT_NS}:snapshot-creator \
+    -n ${ns}
+  
+  echo "---"
+done
+```
+
+**For All Namespaces (Cluster-Wide) Configuration:**
+
+```bash
+SERVICE_ACCOUNT_NS="ansible-automation"
+
+# Test in a specific namespace
+oc auth can-i get virtualmachines \
+  --as=system:serviceaccount:${SERVICE_ACCOUNT_NS}:snapshot-creator \
+  -n <any-namespace>
+
+oc auth can-i create virtualmachinesnapshots \
+  --as=system:serviceaccount:${SERVICE_ACCOUNT_NS}:snapshot-creator \
+  -n <any-namespace>
+
+# Verify ClusterRoleBinding exists
+oc get clusterrolebinding snapshot-creator-cluster-binding
+
+# List all permissions granted to the service account
+oc describe clusterrolebinding snapshot-creator-cluster-binding
+```
+
+**Troubleshooting Permission Issues:**
+
+If the `oc auth can-i` commands return `no`, check the following:
+
+1. **Verify RoleBinding/ClusterRoleBinding exists:**
+   ```bash
+   # For namespace-scoped
+   oc get rolebinding -n <namespace> | grep snapshot-creator
+   
+   # For cluster-wide
+   oc get clusterrolebinding | grep snapshot-creator
+   ```
+
+2. **Check RoleBinding/ClusterRoleBinding details:**
+   ```bash
+   # For namespace-scoped
+   oc get rolebinding <binding-name> -n <namespace> -o yaml
+   
+   # For cluster-wide
+   oc get clusterrolebinding <binding-name> -o yaml
+   ```
+
+3. **Verify Service Account exists:**
+   ```bash
+   oc get serviceaccount snapshot-creator -n <service-account-namespace>
+   ```
+
+4. **Check for typos in namespace or service account name:**
+   - Ensure the service account namespace matches in all commands
+   - Ensure the target namespace is correct
+   - Verify the service account name is exactly `snapshot-creator` (or your custom name)
+
+5. **For multiple namespaces, verify RoleBinding exists in each namespace:**
+   ```bash
+   # List all RoleBindings for the service account across all namespaces
+   oc get rolebinding -A -o json | \
+     jq -r '.items[] | select(.subjects[]?.name=="snapshot-creator") | "\(.metadata.namespace) \(.metadata.name)"'
+   ```
 
 ### 3. Security Considerations
 
