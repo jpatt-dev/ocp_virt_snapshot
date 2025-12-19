@@ -772,8 +772,6 @@ The role handles the following error conditions:
 │   └── ocp_virt_snapshot/
 │       ├── defaults/
 │       │   └── main.yml             # Default variables
-│       ├── meta/
-│       │   └── main.yml             # Role metadata
 │       └── tasks/
 │           ├── main.yml             # Main entry point
 │           └── create.yml           # Snapshot creation logic
