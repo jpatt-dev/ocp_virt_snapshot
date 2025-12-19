@@ -42,10 +42,10 @@ You can configure the service account to work with snapshots in one namespace, m
 | **All Namespaces** | ClusterRoleBinding | Lower (least restrictive) | Production with broad scope | Simple |
 
 **Quick Decision Guide:**
-- **Testing or single project?** → Use **Single Namespace** (Option 1)
-- **Multiple specific projects?** → Use **Multiple Namespaces** (Option 2)
-- **All projects or dynamic namespaces?** → Use **All Namespaces** (Option 3)
-- **Maximum security required?** → Use **Custom Minimal Permissions** (Option 4) with any of the above
+- **Testing or single project?** Use **Single Namespace** (Option 1)
+- **Multiple specific projects?** Use **Multiple Namespaces** (Option 2)
+- **All projects or dynamic namespaces?** Use **All Namespaces** (Option 3)
+- **Maximum security required?** Use **Custom Minimal Permissions** (Option 4) with any of the above
 
 ---
 
@@ -189,36 +189,6 @@ oc create rolebinding snapshot-creator-vm-staging \
   --clusterrole=edit \
   --serviceaccount=ansible-automation:snapshot-creator \
   -n vm-staging
-```
-
-**Bulk Creation Script:**
-```bash
-#!/bin/bash
-SERVICE_ACCOUNT_NS="ansible-automation"
-SERVICE_ACCOUNT="snapshot-creator"
-NAMESPACES=("vm-postbuild-config" "vm-production" "vm-staging" "vm-development")
-
-for namespace in "${NAMESPACES[@]}"; do
-  oc create rolebinding snapshot-creator-${namespace//-/_} \
-    --clusterrole=edit \
-    --serviceaccount=${SERVICE_ACCOUNT_NS}:${SERVICE_ACCOUNT} \
-    -n ${namespace}
-done
-```
-
-**Verify:**
-```bash
-# List all RoleBindings for the service account
-oc get rolebinding -A -o json | \
-  jq -r '.items[] | select(.subjects[]?.name=="snapshot-creator") | "\(.metadata.namespace) \(.metadata.name)"'
-
-# Test permissions in each namespace
-for ns in vm-postbuild-config vm-production vm-staging; do
-  echo "Testing $ns:"
-  oc auth can-i create virtualmachinesnapshots \
-    --as=system:serviceaccount:ansible-automation:snapshot-creator \
-    -n $ns
-done
 ```
 
 ---
@@ -410,27 +380,16 @@ oc create rolebinding snapshot-creator-binding-ns2 \
 
 **Using the Service Account Token in AAP**
 
-After creating the Service Account, you need to extract the token for use in AAP:
+After creating the Service Account, create a token for use in AAP (OpenShift 4.11+):
 
-1. Get the Service Account token secret name:
-   ```bash
-   oc get serviceaccount snapshot-creator -n <namespace> -o jsonpath='{.secrets[0].name}'
-   ```
+```bash
+oc create token snapshot-creator -n <namespace> --duration=8760h
+```
 
-2. Extract the token:
-   ```bash
-   oc get secret <secret-name> -n <namespace> -o jsonpath='{.data.token}' | base64 -d
-   ```
-
-3. Alternatively, create a new token (OpenShift 4.11+):
-   ```bash
-   oc create token snapshot-creator -n <namespace> --duration=8760h
-   ```
-
-4. Use this token in AAP by:
-   - Creating a Kubernetes credential in AAP
-   - Setting the API Key field to the token value
-   - Setting the Host field to your OpenShift API server URL (e.g., `https://api.your-cluster.example.com:6443`)
+Use this token in AAP by:
+- Creating a Kubernetes credential in AAP
+- Setting the API Key field to the token value
+- Setting the Host field to your OpenShift API server URL (e.g., `https://api.your-cluster.example.com:6443`)
 
 **Verifying Permissions**
 
