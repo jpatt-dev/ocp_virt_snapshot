@@ -1,6 +1,4 @@
 ---
-# AAP Job Template Playbook: Create VM Snapshot
-
 - name: Create KubeVirt VM Snapshot
   hosts: localhost
   gather_facts: yes

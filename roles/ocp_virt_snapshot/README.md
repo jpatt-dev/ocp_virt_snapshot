@@ -164,7 +164,7 @@ Tags for selective task execution:
 - `ocp_virt_snapshot` - All role tasks (catch-all)
 - `always`, `never` - Special tags (always run / skip in check mode)
 
-For detailed AAP integration guidance, see [AAP_BEST_PRACTICES.md](../../AAP_BEST_PRACTICES.md).
+For detailed AAP integration guidance, see [playbooks/aap-job-template-survey-example.md](../../playbooks/aap-job-template-survey-example.md).
 
 ## Multi-Volume VM Support
 
